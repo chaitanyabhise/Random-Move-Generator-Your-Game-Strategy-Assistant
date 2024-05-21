@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" href="icon.svg" />
+	<title>Random Movie</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#ff0000">
+	<link rel="manifest" href="manifest.webmanifest">
+	<style>
+		html,
+		body {
+			margin: 0;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+
+		#mega-spinner {
+			position: fixed;
+			top: 0;
+			bottom: 0;
+			right: 0;
+			left: 50%;
+			transition: left ease-in-out 1s, transform ease-in-out 1s;
+		}
+
+		#info {
+			overflow: auto;
+			height: 100%;
+			text-align: center;
+			padding-left: 15px;
+			padding-right: calc(50% + 60px);
+			transition: padding-right ease-in-out 1s, transform ease-in-out 1s, opacity ease-in-out 1s;
+		}
+
+		/*
+		button styles based on:
+			https://codepen.io/kocsten/pen/rggjXp
+		I might eventually do something more like
+			https://jsfiddle.net/1j01/z9ym71v5/9/
+		or maybe
+			https://codepen.io/cesar2535/pen/ByYXpN
+		and I could separate the callout to something like
+			https://codepen.io/mccombsc/pen/ZEzxWPy
+		*/
+		#go {
+			padding: 15px;
+			font-size: 30px;
+			border: none;
+			outline: none;
+			color: #fff;
+			background: #111;
+			cursor: pointer;
+			position: relative;
+			z-index: 0;
+			border-radius: 10px;
+		}
+
+		#go:before {
+			content: '';
+			background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+			position: absolute;
+			top: -2px;
+			left: -2px;
+			background-size: 400%;
+			z-index: -1;
+			filter: blur(5px);
+			width: calc(100% + 4px);
+			height: calc(100% + 4px);
+			animation: glowing 20s linear infinite;
+			opacity: 0;
+			transition: opacity .3s ease-in-out;
+			border-radius: 10px;
+		}
+
+		#go:active {
+			color: #000
+		}
+
+		#go:active:after {
+			background: transparent;
+		}
+
+		#go:hover:before,
+		#go:focus:before {
+			opacity: 1;
+		}
+
+		#go:after {
+			z-index: -1;
+			content: '';
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			background: #111;
+			left: 0;
+			top: 0;
+			border-radius: 10px;
+		}
+
+		@keyframes glowing {
+			0% {
+				background-position: 0 0;
+			}
+
+			50% {
+				background-position: 400% 0;
+			}
+
+			100% {
+				background-position: 0 0;
+			}
+		}
+
+		#title-output h2 {
+			font-variant: small-caps;
+			font-size: 3em;
+			margin: 0;
+		}
+
+		#title-output h3 {
+			font-size: 2em;
+			margin: 0;
+		}
+
+		#title-output h4 {
+			font-size: 1.5em;
+			margin: 0;
+		}
+
+		#title-output h5 {
+			font-size: 1.2em;
+			margin: 0;
+		}
+
+		#title-output h6 {
+			font-size: 1em;
+			margin: 0;
+		}
+
+		#instance-output {
+			font-size: 2em;
+			color: gray;
+			margin-bottom: 1em;
+		}
+
+		#title-output {
+			margin: auto;
+			margin-top: 1em;
+			max-width: 50em;
+		}
+
+		#plinketto {
+			position: fixed;
+			top: 0;
+			bottom: 0;
+			right: 0;
+			left: 0;
+		}
+
+		#plinketto-svg {
+			height: 100vh;
+			width: 100%;
+			background-color: black;
+		}
+
+		.plinketto-peg {
+			fill: gray;
+			stroke: lightgray;
+			stroke-width: 0.2px;
+		}
+
+		.plinketto-ball {
+			fill: salmon;
+			stroke: rosybrown;
+			stroke-width: 0.2px;
+		}
+
+		.plinketto-bucket text {
+			font-weight: bold;
+			fill: white;
+			stroke-width: 1px;
+			stroke: #000;
+			paint-order: stroke fill;
+		}
+
+		#mega-spinner-svg {
+			height: 100vh;
+			width: 100%;
+			--item-height: 40px;
+			--peg-size: 5px;
+		}
+
+		.mega-spinner-item text {
+			font-size: calc(var(--item-height) * 0.6);
+			font-weight: bold;
+			fill: white;
+			stroke-width: 3.5px;
+			stroke: #000;
+			paint-order: stroke fill;
+		}
+
+		.mega-spinner-item circle {
+			fill: rgb(37, 37, 37);
+		}
+
+		#mega-spinner-ticker {
+			position: absolute;
+			top: 50vh;
+			right: calc(100% - 5px);
+			width: 0;
+			height: 0;
+			border-top: 60px solid transparent;
+			border-bottom: 60px solid transparent;
+			border-left: 60px solid red;
+			transform: translateY(-50%) scaleY(0.5);
+			transform-origin: 0% 50%;
+			z-index: 1;
+		}
+
+		@media (max-width: 500px) {
+			#mega-spinner {
+				left: 45px;
+			}
+
+			body:not(.spinner-active) #mega-spinner {
+				transform: translateX(calc(100% - 10px));
+				pointer-events: none;
+			}
+
+			#info {
+				padding-right: 80px;
+			}
+
+			body.spinner-active #info {
+				opacity: 0;
+				transform: translateX(-150px);
+			}
+		}
+
+		#result {
+			transition: opacity ease-in-out 0.3s;
+		}
+
+		#filters {
+			z-index: 2;
+			position: fixed;
+			top: 0;
+			right: 0;
+			background: black;
+			color: white;
+			padding: 15px;
+			border-bottom-left-radius: 5px;
+		}
+
+		.close {
+			vertical-align: middle;
+			border: none;
+			color: inherit;
+			border-radius: 50%;
+			background: transparent;
+			position: relative;
+			width: 32px;
+			height: 32px;
+			opacity: 0.6;
+		}
+
+		.close:focus,
+		.close:hover {
+			opacity: 1;
+			background: rgba(128, 128, 128, 0.5);
+		}
+
+		.close:active {
+			background: rgba(128, 128, 128, 0.9);
+		}
+
+		.close::before,
+		.close::after {
+			content: " ";
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			height: 20px;
+			width: 4px;
+			background-color: currentColor;
+		}
+
+		.close::before {
+			transform: translate(-50%, -50%) rotate(45deg);
+		}
+
+		.close::after {
+			transform: translate(-50%, -50%) rotate(-45deg);
+		}
+
+		.clipboard-toast {
+			background-color: rgb(0, 183, 0);
+			color: white;
+			transition: opacity .2s ease, transform .2s ease;
+			border-radius: 5px;
+			padding: 5px;
+			font-family: sans-serif;
+		}
+
+		.clipboard-toast.error {
+			background-color: rgb(171, 17, 0);
+			color: white;
+		}
+	</style>
+	
+	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9665487786321141"
+     crossorigin="anonymous"></script>
+	
+</head>
+
+<body>
+	<div id="info">
+		<h1>Random Movie</h1>
+		<a href="https://www.linkedin.com/in/chaitanya-bhise-98a41520a/">Linkedin</a> | <a
+			href="https://chaitanyaserver.com/donate/">Donate</a> | <a href="#" id="open-filters" role="button"
+			aria-keyshortcuts="Ctrl+F">🔎Filter</a>
+		<br>
+		<br>
+		<div>
+			<!-- div is for fitty centering given that #info has padding -->
+			<button id="go" autofocus>Random Movie</button>
+		</div>
+		<div id="result" hidden>
+			<div id="title-output"></div>
+			<div id="instance-output"></div>
+			<a id="watch-online-link">Watch Online</a>
+			<button id="copy-to-clipboard" aria-keyshortcuts="Ctrl+C">Copy To Clipboard</a>
+		</div>
+		<div>
+
+			<a href="https://chaitanyaserver.com/">© Chaitanya Server</a>
+
+		</div>
+	</div>
+	<div id="mega-spinner">
+		<div id="mega-spinner-ticker"></div>
+		<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="mega-spinner-svg">
+			<g id="mega-spinner-items" style="transform: translate(0, 50vh)"></g>
+		</svg>
+	</div>
+	<div id="plinketto" hidden>
+		<svg xmlns="http://www.w3.org/2000/svg" version="1.1" id="plinketto-svg" viewBox="0 0 100 100"></svg>
+	</div>
+	<div id="filters" hidden>
+		<label>
+			Filter on Movie Title:
+			<input type="search" id="title-filter" />
+		</label>
+		<button id="close-filters" class="close" aria-label="Close filter bar"></button>
+	</div>
+	<script src="app.js" type="module"></script>
+	
+	
+	<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9665487786321141"
+     crossorigin="anonymous"></script>
+<!-- Chaitanya Server Blog 2024 -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-9665487786321141"
+     data-ad-slot="8724281137"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+	
+</body>
+
+</html>
